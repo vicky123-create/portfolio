@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halara智能评论分析</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <!-- 主布局容器 -->
+    <div class="app-layout">
+        <!-- 左侧边栏 -->
+        <aside class="left-sidebar">
+            <div class="sidebar-brand">Halara</div>
+            <div class="sidebar-user">
+                <div class="user-info">用户名和头像</div>
+            </div>
+            <button class="btn-create-task" id="createTaskBtn">+创建任务</button>
+            
+            <!-- 当前任务显示区域 -->
+            <div class="current-task-section" id="currentTaskSection" style="display: none;">
+                <div class="current-task-label">当前任务</div>
+                <div class="current-task-name" id="currentTaskName">TASK 1</div>
+            </div>
+            
+            <div class="task-list-sidebar">
+                <div class="task-list-title">历史任务</div>
+                <div class="task-items" id="taskItems">
+                    <!-- 任务列表默认为空，通过JS动态加载 -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content-area">
+            <!-- 步骤指示器（缩小版，分析流程中显示） -->
+            <div class="steps-container compact" id="stepsContainer" style="display: none;">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">上传数据</div>
+            </div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">有效性验证</div>
+            </div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">评论分析</div>
+            </div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">结果呈现</div>
+            </div>
+        </div>
+
+            <!-- 首页：四个步骤引导卡片 -->
+            <div class="home-page" id="homePage">
+                <div class="steps-grid">
+                    <div class="step-card active" id="stepCard1" data-step="1">
+                        <div class="step-card-number">1</div>
+                        <div class="step-card-title">上传数据</div>
+                        <div class="step-card-desc">选择数据来源并上传</div>
+                    </div>
+                    <div class="step-card" id="stepCard2" data-step="2">
+                        <div class="step-card-number">2</div>
+                        <div class="step-card-title">有效性验证 (AI分析)</div>
+                        <div class="step-card-desc">有效性验证与筛选</div>
+                    </div>
+                    <div class="step-card" id="stepCard3" data-step="3">
+                        <div class="step-card-number">3</div>
+                        <div class="step-card-title">评论分析 (AI分析)</div>
+                        <div class="step-card-desc">智能分类评论</div>
+                    </div>
+                    <div class="step-card" id="stepCard4" data-step="4">
+                        <div class="step-card-number">4</div>
+                        <div class="step-card-title">结果呈现</div>
+                        <div class="step-card-desc">可视化分析结果</div>
+                    </div>
+                </div>
+            </div>
+
+
+        <!-- 网站评论筛选页面 S -->
+        <div class="page" id="webFilterPage">
+            <div class="page-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2 class="page-title" style="margin: 0;">网站评论筛选（CMS）</h2>
+                    <button type="button" class="btn-secondary" id="backFromWebFilterBtn" style="display: flex; align-items: center; gap: 8px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        返回
+                    </button>
+                </div>
+                <form class="cms-filter-form" id="cmsFilterFormWebPage">
+                    <input class="cms-input" type="text" id="filterSpuIdWebPage" placeholder="SPU ID" />
+                    <input class="cms-input" type="text" id="filterUserNameWebPage" placeholder="用户名" />
+                    <input class="cms-input" type="text" id="filterEmailWebPage" placeholder="用户邮箱" />
+                    <select class="cms-input" id="filterStatusWebPage">
+                        <option value="">状态</option>
+                        <option value="show">展示</option>
+                        <option value="hide">隐藏</option>
+                    </select>
+                    <select class="cms-input" id="filterStarWebPage">
+                        <option value="">全部星级</option>
+                        <option value="5">五星</option>
+                        <option value="4">四星</option>
+                        <option value="3">三星</option>
+                        <option value="2">二星</option>
+                        <option value="1">一星</option>
+                    </select>
+                    <button class="btn-primary" type="button" id="filterQueryBtnWebPage">查询</button>
+                    <button class="btn-secondary" type="reset">重置</button>
+                </form>
+
+                <!-- CMS表格区域 -->
+                <div class="cms-table-section">
+                    <div class="table-header">
+                        <h3 class="table-title">评论列表</h3>
+                        <button class="btn-secondary" id="exportWebBtnWebPage">导出评论</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="webTableWebPage">
+                            <thead>
+                                <tr>
+                                    <th>序号</th>
+                                    <th>SPU ID</th>
+                                    <th>用户名</th>
+                                    <th>用户邮箱</th>
+                                    <th>状态</th>
+                                    <th>评论来源</th>
+                                    <th>星级</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="webTableBodyWebPage">
+                                <!-- 模拟数据后续由JS填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <button class="btn-primary" id="webToNextBtnWebPage">下一步：价值判断</button>
+            </div>
+        </div>
+        <!-- 网站评论筛选页面 E -->
+
+        <!-- 上传页面（Step 1） -->
+        <div class="page" id="uploadPage">
+            <div class="page-content">
+                <h2 class="page-title">上传评论数据</h2>
+                <p class="page-description">请选择数据来源并上传数据</p>
+                
+                <!-- 数据来源选择（两种方式二选一，并列关系） -->
+                <div class="source-selector" id="sourceSelector">
+                    <button class="source-btn" id="sourceWebBtn" data-source="web">
+                        <div class="source-btn-icon">🌐</div>
+                        <div class="source-btn-title">站内数据提取</div>
+                        <div class="source-btn-desc">从网站筛选评论数据</div>
+                    </button>
+                    <button class="source-btn" id="sourceExcelBtn" data-source="excel">
+                        <div class="source-btn-icon">📊</div>
+                        <div class="source-btn-title">导入数据Excel</div>
+                        <div class="source-btn-desc">上传Excel文件</div>
+                    </button>
+                </div>
+
+                <!-- 站内数据提取界面 -->
+                <div class="data-source-content" id="webSourceContent" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 class="section-title" style="margin: 0;">站内数据筛选</h3>
+                    </div>
+                    <form class="cms-filter-form" id="cmsFilterForm">
+                        <input class="cms-input" type="text" id="filterSpuId" placeholder="SPU ID" />
+                        <input class="cms-input" type="text" id="filterUserName" placeholder="用户名" />
+                        <input class="cms-input" type="text" id="filterEmail" placeholder="用户邮箱" />
+                        <select class="cms-input" id="filterStatus">
+                            <option value="">状态</option>
+                            <option value="show">展示</option>
+                            <option value="hide">隐藏</option>
+                        </select>
+                        <select class="cms-input" id="filterStar">
+                            <option value="">全部星级</option>
+                            <option value="5">五星</option>
+                            <option value="4">四星</option>
+                            <option value="3">三星</option>
+                            <option value="2">二星</option>
+                            <option value="1">一星</option>
+                        </select>
+                        <button class="btn-primary" type="button" id="filterQueryBtn">查询</button>
+                        <button class="btn-secondary" type="reset">重置</button>
+                    </form>
+
+                    <div class="cms-table-section">
+                        <div class="table-header">
+                            <h3 class="table-title">评论列表</h3>
+                            <button class="btn-secondary" id="exportWebBtn">导出评论</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="webTable">
+                                <thead>
+                                    <tr>
+                                        <th>序号</th>
+                                        <th>SPU ID</th>
+                                        <th>用户名</th>
+                                        <th>用户邮箱</th>
+                                        <th>状态</th>
+                                        <th>评论来源</th>
+                                        <th>星级</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="webTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Excel上传界面 -->
+                <div class="data-source-content" id="excelSourceContent" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 class="section-title" style="margin: 0;">Excel数据上传</h3>
+                    </div>
+                <div class="language-selector">
+                    <label for="languageSelect" class="language-label">选择评论语言：</label>
+                    <select id="languageSelect" class="language-select">
+                        <option value="en">English (英语)</option>
+                        <option value="de">Deutsch (德语)</option>
+                        <option value="zh">中文</option>
+                    </select>
+                </div>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p class="upload-text">拖拽文件到此处或<span class="upload-link" id="fileSelect">点击选择文件</span></p>
+                    <p class="upload-hint">支持 .xlsx, .xls 格式</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+                </div>
+
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <div class="file-info-card">
+                        <div class="file-info-item">
+                            <span class="file-info-label">文件名：</span>
+                            <span class="file-info-value" id="fileName"></span>
+                        </div>
+                        <div class="file-info-item">
+                            <span class="file-info-label">文件大小：</span>
+                            <span class="file-info-value" id="fileSize"></span>
+                        </div>
+                        <div class="file-info-item">
+                            <span class="file-info-label">评论数量：</span>
+                            <span class="file-info-value" id="reviewCount"></span>
+                        </div>
+                    </div>
+                    <div class="preview-section">
+                        <h3 class="preview-title">数据预览</h3>
+                        <div class="preview-table-container">
+                            <table class="preview-table" id="previewTable">
+                                <thead>
+                                    <tr>
+                                        <th>序号</th>
+                                        <th>评论内容</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <div class="page-actions" id="uploadPageActions" style="display: none;">
+                    <button class="btn-secondary" id="backBtn1">上一步</button>
+                    <button class="btn-primary" id="nextBtn1">下一步：有效性验证</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 有效性验证页面（Step 2） -->
+        <div class="page" id="valuePromptPage">
+            <div class="page-content">
+                <h2 class="page-title">有效性验证</h2>
+                <p class="page-description">配置AI模型和Prompt，进行有效性验证</p>
+                
+                <!-- AI服务提供商配置 -->
+                <div class="api-config">
+                    <label for="apiProviderSelect2" class="api-label">选择AI服务提供商：</label>
+                    <select id="apiProviderSelect2" class="api-select">
+                        <option value="huggingface">Hugging Face (免费推荐)</option>
+                        <option value="deepseek">DeepSeek (免费推荐)</option>
+                        <option value="doubao">豆包 (免费推荐)</option>
+                        <option value="kimi">Kimi (免费推荐)</option>
+                        <option value="wenxin">文心一言 (免费推荐)</option>
+                        <option value="gemini">Gemini (免费推荐)</option>
+                        <option value="openai">OpenAI (需付费)</option>
+                    </select>
+                    <label for="apiKeyInput2" class="api-label">API Key / Token：</label>
+                    <input type="password" id="apiKeyInput2" class="api-input" placeholder="请输入对应模型的API Key或Token">
+                    <div class="api-key-history" id="apiKeyHistory2" style="display: none;">
+                        <label class="api-label">历史记录：</label>
+                        <select id="apiKeyHistorySelect2" class="api-select">
+                            <option value="">选择历史API Key</option>
+                        </select>
+                    </div>
+                    <div class="api-hint" id="apiHint2">
+                        <div class="api-hint-item">
+                            <strong>Hugging Face (推荐)</strong>：免费使用，每月100小时推理时间。<br>
+                            获取Token：<a href="https://huggingface.co/settings/tokens" target="_blank">https://huggingface.co/settings/tokens</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Prompt配置 -->
+                <div class="prompt-config-single">
+                    <label for="valuePromptInput" class="prompt-label">有效性验证 Prompt：</label>
+                    <textarea id="valuePromptInput" class="prompt-textarea" rows="12" placeholder="请输入有效性验证的prompt（中文）..."></textarea>
+                    <div class="prompt-actions">
+                        <button class="btn-reset-prompt" data-prompt="value">恢复默认Prompt</button>
+                    </div>
+                    <p class="prompt-hint">💡 提示：使用 <code>{review}</code> 作为评论内容的占位符，使用 <code>{lang}</code> 作为语言名称（如：英语、德语、中文）</p>
+                </div>
+                
+                <!-- 数据清洗结果展示区域（分析完成后显示） -->
+                <div class="cleaning-result-section" id="cleaningResultSection" style="display: none;">
+                    <h3 class="section-title">数据清洗结果</h3>
+                    <div class="stats-cards-mini">
+                        <div class="stat-card-mini">
+                            <div class="stat-value-mini" id="cleaningTotal">0</div>
+                            <div class="stat-label-mini">总评论数</div>
+                        </div>
+                        <div class="stat-card-mini">
+                            <div class="stat-value-mini" id="cleaningValuable">0</div>
+                            <div class="stat-label-mini">有价值</div>
+                        </div>
+                        <div class="stat-card-mini">
+                            <div class="stat-value-mini" id="cleaningInvaluable">0</div>
+                            <div class="stat-label-mini">无价值</div>
+                        </div>
+                        <div class="stat-card-mini">
+                            <div class="stat-value-mini" id="cleaningRate">0%</div>
+                            <div class="stat-label-mini">有价值占比</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 手动校验区域 -->
+                    <div class="manual-review-section">
+                        <h3 class="section-title">手动校验</h3>
+                        <!-- Tab 切换 -->
+                        <div class="review-tabs">
+                            <button class="review-tab active" data-tab="valuable" id="valuableTab">
+                                有价值评论 (<span id="valuableCount">0</span>)
+                            </button>
+                            <button class="review-tab" data-tab="invaluable" id="invaluableTab">
+                                无价值评论 (<span id="invaluableCount">0</span>)
+                            </button>
+                        </div>
+                        <!-- Tab 内容 -->
+                        <div class="review-tab-content">
+                            <!-- 有价值列表 -->
+                            <div class="review-tab-panel active" id="valuableTabPanel">
+                                <div class="review-list-content" id="valuableListContent">
+                                    <!-- 列表项将通过JS动态生成 -->
+                                </div>
+                                <div class="pagination" id="valuablePagination">
+                                    <button class="pagination-btn" id="valuablePrevBtn" disabled>上一页</button>
+                                    <span class="pagination-info" id="valuablePageInfo">第 1 页 / 共 1 页</span>
+                                    <button class="pagination-btn" id="valuableNextBtn" disabled>下一页</button>
+                                </div>
+                            </div>
+                            
+                            <!-- 无价值列表 -->
+                            <div class="review-tab-panel" id="invaluableTabPanel">
+                                <div class="review-list-content" id="invaluableListContent">
+                                    <!-- 列表项将通过JS动态生成 -->
+                                </div>
+                                <div class="pagination" id="invaluablePagination">
+                                    <button class="pagination-btn" id="invaluablePrevBtn" disabled>上一页</button>
+                                    <span class="pagination-info" id="invaluablePageInfo">第 1 页 / 共 1 页</span>
+                                    <button class="pagination-btn" id="invaluableNextBtn" disabled>下一页</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="page-actions">
+                    <button class="btn-secondary" id="backToHomeBtn2">返回首页</button>
+                    <button class="btn-secondary" id="backBtn2">上一步</button>
+                    <button class="btn-primary" id="startCleaningBtn">开始有效性验证</button>
+                    <button class="btn-primary" id="nextBtn2" style="display: none;">下一步：评论分析</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 评论分析页面（Step 3） -->
+        <div class="page" id="categoryPromptPage">
+            <div class="page-content">
+                <h2 class="page-title">评论分析</h2>
+                <p class="page-description">配置AI模型和Prompt，进行评论分类分析</p>
+                
+                <!-- AI服务提供商配置 -->
+                <div class="api-config">
+                    <label for="apiProviderSelect3" class="api-label">选择AI服务提供商：</label>
+                    <select id="apiProviderSelect3" class="api-select">
+                        <option value="huggingface">Hugging Face (免费推荐)</option>
+                        <option value="deepseek">DeepSeek (免费推荐)</option>
+                        <option value="doubao">豆包 (免费推荐)</option>
+                        <option value="kimi">Kimi (免费推荐)</option>
+                        <option value="wenxin">文心一言 (免费推荐)</option>
+                        <option value="gemini">Gemini (免费推荐)</option>
+                        <option value="openai">OpenAI (需付费)</option>
+                    </select>
+                    <label for="apiKeyInput3" class="api-label">API Key / Token：</label>
+                    <input type="password" id="apiKeyInput3" class="api-input" placeholder="请输入对应模型的API Key或Token">
+                    <div class="api-key-history" id="apiKeyHistory3" style="display: none;">
+                        <label class="api-label">历史记录：</label>
+                        <select id="apiKeyHistorySelect3" class="api-select">
+                            <option value="">选择历史API Key</option>
+                        </select>
+                    </div>
+                    <div class="api-hint" id="apiHint3">
+                        <div class="api-hint-item">
+                            <strong>Hugging Face (推荐)</strong>：免费使用，每月100小时推理时间。<br>
+                            获取Token：<a href="https://huggingface.co/settings/tokens" target="_blank">https://huggingface.co/settings/tokens</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 数据选择配置 -->
+                <div class="data-selection-config">
+                    <label for="dataSelectionSelect" class="api-label">选择分析数据：</label>
+                    <select id="dataSelectionSelect" class="api-select">
+                        <option value="valuable">有价值数据</option>
+                        <option value="invaluable">无价值数据</option>
+                    </select>
+                    <p class="prompt-hint">💡 提示：选择"有价值数据"将使用Step 2中分类好的有价值数据进行分类分析；选择"无价值数据"将使用无价值数据进行分类分析</p>
+                </div>
+                
+                <!-- Prompt配置 -->
+                <div class="prompt-config-single">
+                    <label for="categoryPromptInput" class="prompt-label">评论分析 Prompt：</label>
+                    <textarea id="categoryPromptInput" class="prompt-textarea" rows="12" placeholder="请输入评论分析的prompt（中文）..."></textarea>
+                    <div class="prompt-actions">
+                        <button class="btn-reset-prompt" data-prompt="category">恢复默认Prompt</button>
+                    </div>
+                    <p class="prompt-hint">💡 提示：使用 <code>{review}</code> 作为评论内容的占位符，使用 <code>{lang}</code> 作为语言名称，使用 <code>{categories}</code> 作为分类列表</p>
+                </div>
+                
+                <div class="page-actions">
+                    <button class="btn-secondary" id="backToHomeBtn3">返回首页</button>
+                    <button class="btn-secondary" id="backBtn3">上一步</button>
+                    <button class="btn-primary" id="nextBtn3">开始评论分析</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分析进度页面 -->
+        <div class="page" id="analyzingPage">
+            <div class="page-content">
+                <h2 class="page-title">正在分析数据...</h2>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">正在解析数据...</p>
+                </div>
+                <div class="analyzing-steps" id="analyzingSteps">
+                    <div class="analyzing-step">
+                        <span class="step-icon">✓</span>
+                        <span class="step-text">数据解析完成</span>
+                    </div>
+                    <div class="analyzing-step">
+                        <span class="step-icon">⏳</span>
+                        <span class="step-text">有效性验证中...</span>
+                    </div>
+                    <div class="analyzing-step">
+                        <span class="step-icon">⏳</span>
+                        <span class="step-text">评论分类中...</span>
+                    </div>
+                    <div class="analyzing-step">
+                        <span class="step-icon">⏳</span>
+                        <span class="step-text">生成报告...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果呈现页面 -->
+        <div class="page" id="resultPage">
+            <div class="page-content">
+                <h2 class="page-title">分析结果</h2>
+                
+                <!-- 统一的 Tab 导航 -->
+                <div class="result-tabs">
+                    <button class="result-tab active" data-tab="validity" id="validityTab">
+                        有效性验证结果
+                    </button>
+                    <button class="result-tab" data-tab="category" id="categoryTab">
+                        评论分类统计
+                    </button>
+                    <button class="result-tab" data-tab="details" id="detailsTab">
+                        详细数据
+                    </button>
+                </div>
+                
+                <!-- Tab 1: 有效性验证结果 -->
+                <div class="result-tab-content active" id="validityContent">
+                    <!-- 统计卡片 -->
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <div class="stat-value" id="step2TotalReviews">0</div>
+                            <div class="stat-label">总评论数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="step2ValuableReviews">0</div>
+                            <div class="stat-label">有价值评论</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="step2InvaluableReviews">0</div>
+                            <div class="stat-label">无价值评论</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="step2ValuableRate">0%</div>
+                            <div class="stat-label">有价值占比</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 饼图（使用原来的设计样式） -->
+                    <div class="charts-container">
+                        <div class="chart-card">
+                            <h3 class="chart-title">评论价值分布</h3>
+                            <div class="chart" id="valueChart"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 2: 评论分类统计 -->
+                <div class="result-tab-content" id="categoryContent">
+                    <!-- Step 3 标签统计列表 -->
+                    <div class="category-stats-list" id="categoryStatsList">
+                        <!-- 标签统计项将通过JS动态生成 -->
+                    </div>
+
+                    <!-- Step 3 图表：分类统计柱状图 -->
+                    <div class="charts-container">
+                        <div class="chart-card">
+                            <h3 class="chart-title">评论分类统计</h3>
+                            <div class="chart" id="categoryChart"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 3: 详细数据 -->
+                <div class="result-tab-content" id="detailsContent">
+                    <div class="table-section">
+                        <div class="table-header">
+                            <div class="table-actions">
+                                <input type="text" class="search-input" id="searchInput" placeholder="搜索评论...">
+                                <select class="filter-select" id="valueFilter">
+                                    <option value="all">全部</option>
+                                    <option value="valuable">有价值</option>
+                                    <option value="invaluable">无价值</option>
+                                </select>
+                                <select class="filter-select" id="categoryFilter">
+                                    <option value="all">全部分类</option>
+                                </select>
+                                <button class="btn-secondary" id="exportBtn">导出数据</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="dataTable">
+                                <thead>
+                                    <tr>
+                                        <th class="col-id">序号</th>
+                                        <th class="col-review">评论内容</th>
+                                        <th class="col-value">价值判断</th>
+                                        <th class="col-category">分类</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- 结果表格分页 -->
+                        <div class="pagination" id="resultTablePagination">
+                            <button class="pagination-btn" id="resultTablePrevBtn" disabled>上一页</button>
+                            <span class="pagination-info" id="resultTablePageInfo">第 1 页 / 共 1 页</span>
+                            <button class="pagination-btn" id="resultTableNextBtn" disabled>下一页</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="page-actions">
+                    <button class="btn-secondary" id="backToHomeBtn4">返回首页</button>
+                    <button class="btn-secondary" id="backBtn4">上一步</button>
+                    <button class="btn-primary" id="resetAnalysisBtn">完成</button>
+                </div>
+            </div>
+        </main>
+        </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
