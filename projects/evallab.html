@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EvalLab · AI 回答质量评测平台</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #080B10;
+    --surface: rgba(255,255,255,0.025);
+    --border: rgba(255,255,255,0.065);
+    --text: #E2E8F0;
+    --muted: rgba(255,255,255,0.35);
+    --green: #6EE7B7;
+    --blue: #93C5FD;
+    --yellow: #FCD34D;
+    --red: #FCA5A5;
+    --purple: #C4B5FD;
+    --pink: #F9A8D4;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: 'DM Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ─── Sidebar ─────────────────────────────────────────────── */
+  #sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.02);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0 20px;
+    height: 100vh;
+  }
+  .logo-wrap { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .logo-name { font-size: 21px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-name span.g { color: var(--green); }
+  .logo-name span.w { color: rgba(255,255,255,0.9); }
+  .logo-name span.b { color: rgba(255,255,255,0.22); font-size: 11px; font-weight: 400; margin-left: 3px; vertical-align: middle; }
+  .logo-sub { font-size: 11px; color: rgba(255,255,255,0.22); margin-top: 3px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer; font-size: 14px;
+    font-weight: 400; color: rgba(255,255,255,0.4);
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-item:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.02); }
+  .nav-item.active { color: var(--green); background: rgba(110,231,183,0.055); border-left-color: var(--green); font-weight: 600; }
+  .nav-icon { font-size: 16px; }
+  .sidebar-footer { margin-top: auto; padding: 0 16px; }
+  .usage-card { padding: 12px 14px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid var(--border); }
+  .usage-label { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 7px; }
+  .usage-bar { height: 4px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; margin-bottom: 6px; }
+  .usage-fill { height: 100%; width: 34%; background: var(--green); border-radius: 99px; }
+  .usage-text { font-size: 11px; color: rgba(255,255,255,0.22); }
+
+  /* ─── Main ────────────────────────────────────────────────── */
+  #main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 36px 44px;
+    scroll-behavior: smooth;
+  }
+  #main::-webkit-scrollbar { width: 6px; }
+  #main::-webkit-scrollbar-track { background: transparent; }
+  #main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header { margin-bottom: 32px; }
+  .page-header h1 { font-size: 27px; font-weight: 800; letter-spacing: -0.5px; }
+  .page-header p { color: var(--muted); margin-top: 5px; font-size: 14px; }
+  .page-header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; }
+
+  /* ─── Cards ───────────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .card-sm { border-radius: 12px; padding: 16px; }
+  .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+
+  /* ─── Grid helpers ────────────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .span-2 { grid-column: 1/-1; }
+  .flex { display: flex; }
+  .flex-col { display: flex; flex-direction: column; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .gap-16 { gap: 16px; }
+  .gap-20 { gap: 20px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-12 { margin-bottom: 12px; }
+  .mb-16 { margin-bottom: 16px; }
+  .mb-20 { margin-bottom: 20px; }
+  .mb-24 { margin-bottom: 24px; }
+  .mt-auto { margin-top: auto; }
+  .flex-1 { flex: 1; }
+  .align-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .text-center { text-align: center; }
+
+  /* ─── Buttons ─────────────────────────────────────────────── */
+  .btn {
+    padding: 10px 20px; border-radius: 10px; border: none;
+    cursor: pointer; font-size: 14px; font-weight: 600;
+    transition: all 0.15s; font-family: inherit;
+  }
+  .btn-primary { background: linear-gradient(135deg, #6EE7B7, #3B82F6); color: #080B10; }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(110,231,183,0.25); }
+  .btn-secondary { background: rgba(110,231,183,0.1); color: var(--green); border: 1px solid rgba(110,231,183,0.2); }
+  .btn-secondary:hover { background: rgba(110,231,183,0.15); }
+  .btn-ghost { background: transparent; color: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.1); }
+  .btn-ghost:hover { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.2); }
+  .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+  .btn-full { width: 100%; }
+
+  /* ─── Badges ──────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-green { background: rgba(110,231,183,0.12); color: var(--green); border: 1px solid rgba(110,231,183,0.22); }
+  .badge-blue { background: rgba(147,197,253,0.12); color: var(--blue); border: 1px solid rgba(147,197,253,0.22); }
+  .badge-yellow { background: rgba(252,211,77,0.12); color: var(--yellow); border: 1px solid rgba(252,211,77,0.22); }
+  .badge-red { background: rgba(252,165,165,0.12); color: var(--red); border: 1px solid rgba(252,165,165,0.22); }
+  .badge-purple { background: rgba(196,181,253,0.12); color: var(--purple); border: 1px solid rgba(196,181,253,0.22); }
+  .badge-muted { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35); border: 1px solid rgba(255,255,255,0.08); }
+
+  /* ─── Step Wizard ─────────────────────────────────────────── */
+  .step-bar { display: flex; align-items: center; margin-bottom: 36px; }
+  .step-item { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .step-circle {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.3);
+    border: 2px solid rgba(255,255,255,0.1);
+    transition: all 0.25s;
+    flex-shrink: 0;
+  }
+  .step-circle.active { background: var(--green); color: #080B10; border-color: var(--green); }
+  .step-circle.done { background: rgba(110,231,183,0.15); color: var(--green); border-color: rgba(110,231,183,0.4); }
+  .step-label { font-size: 13px; color: rgba(255,255,255,0.3); white-space: nowrap; transition: color 0.2s; }
+  .step-label.active { color: var(--text); font-weight: 600; }
+  .step-connector { flex: 1; height: 1px; background: rgba(255,255,255,0.08); margin: 0 16px; }
+
+  /* ─── Upload zone ─────────────────────────────────────────── */
+  .upload-zone {
+    border: 2px dashed rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 44px 20px;
+    text-align: center; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .upload-zone:hover { border-color: rgba(110,231,183,0.3); background: rgba(110,231,183,0.02); }
+  .upload-zone.active { border-color: var(--green); background: rgba(110,231,183,0.04); }
+  .upload-icon { font-size: 38px; margin-bottom: 10px; }
+  .upload-text { color: rgba(255,255,255,0.5); font-size: 14px; }
+  .upload-sub { color: rgba(255,255,255,0.25); font-size: 12px; margin-top: 4px; }
+
+  /* ─── Dataset list items ──────────────────────────────────── */
+  .ds-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px; border-radius: 10px; margin-bottom: 8px;
+    cursor: pointer; transition: all 0.15s;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .ds-item:hover { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); }
+  .ds-item.selected { background: rgba(110,231,183,0.05); border-color: rgba(110,231,183,0.2); }
+  .ds-name { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .ds-meta { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+  .check-icon { color: var(--green); font-size: 18px; }
+
+  /* ─── Preview items ───────────────────────────────────────── */
+  .preview-item {
+    border-radius: 10px; overflow: hidden; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.015);
+    margin-bottom: 10px;
+  }
+  .preview-header { padding: 10px 14px; display: flex; gap: 10px; align-items: flex-start; }
+  .preview-qnum { font-size: 11px; color: rgba(255,255,255,0.28); flex-shrink: 0; margin-top: 1px; }
+  .preview-query { flex: 1; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+  .preview-arrow { color: rgba(255,255,255,0.2); font-size: 11px; flex-shrink: 0; }
+  .preview-body { padding: 0 14px 12px 34px; font-size: 12px; color: rgba(255,255,255,0.38); line-height: 1.75; border-top: 1px solid rgba(255,255,255,0.04); display: none; }
+  .preview-body.open { display: block; }
+  .preview-body-label { padding-top: 10px; color: rgba(110,231,183,0.55); font-weight: 600; font-size: 11px; margin-bottom: 4px; }
+
+  /* ─── Prompt Editor ───────────────────────────────────────── */
+  .prompt-editor {
+    width: 100%; min-height: 320px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; color: var(--text);
+    font-size: 13px; line-height: 1.75;
+    padding: 16px; resize: vertical;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    outline: none; transition: border-color 0.2s;
+    box-sizing: border-box;
+  }
+  .prompt-editor:focus { border-color: rgba(110,231,183,0.3); }
+  .tpl-item {
+    padding: 10px 12px; border-radius: 10px; cursor: pointer;
+    margin-bottom: 8px; background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05); transition: all 0.15s;
+  }
+  .tpl-item:hover { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); }
+  .tpl-header { display: flex; align-items: center; gap: 8px; }
+  .tpl-icon { font-size: 18px; }
+  .tpl-name { font-size: 13px; font-weight: 500; }
+  .tpl-footer { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; color: rgba(255,255,255,0.28); }
+
+  /* ─── Model selector ──────────────────────────────────────── */
+  .model-item {
+    padding: 14px 16px; border-radius: 12px; margin-bottom: 10px; cursor: pointer;
+    background: rgba(255,255,255,0.02);
+    border: 1.5px solid rgba(255,255,255,0.06);
+    display: flex; justify-content: space-between; align-items: center;
+    transition: all 0.15s;
+  }
+  .model-item:hover { border-color: rgba(255,255,255,0.12); }
+  .model-item.selected { background: rgba(110,231,183,0.055); border-color: rgba(110,231,183,0.35); }
+  .model-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .model-desc { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 3px; }
+  .radio {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.15);
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .radio.selected { background: var(--green); border-color: var(--green); }
+
+  /* ─── Dimension checkboxes ────────────────────────────────── */
+  .dim-item {
+    padding: 11px 14px; border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.15s; margin-bottom: 9px;
+  }
+  .dim-item:hover { border-color: rgba(255,255,255,0.1); }
+  .dim-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: rgba(255,255,255,0.12); }
+  .dim-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.45); }
+  .dim-desc { font-size: 11px; color: rgba(255,255,255,0.28); margin-top: 1px; }
+  .dim-check {
+    width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; margin-left: auto;
+    border: 2px solid rgba(255,255,255,0.12); background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #080B10; font-weight: 700;
+    transition: all 0.15s;
+  }
+
+  /* ─── Progress ────────────────────────────────────────────── */
+  .progress-wrap { margin-top: 20px; }
+  .progress-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
+  .progress-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; width: 0%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--green), #3B82F6);
+    transition: width 0.22s ease;
+  }
+  .progress-steps { display: flex; gap: 20px; margin-top: 12px; font-size: 12px; color: rgba(255,255,255,0.28); }
+  .pstep.done { color: var(--green); }
+
+  /* ─── Config summary ──────────────────────────────────────── */
+  .config-summary { display: flex; gap: 20px; font-size: 13px; color: rgba(255,255,255,0.38); }
+
+  /* ─── Results ─────────────────────────────────────────────── */
+  .stat-card { text-align: center; }
+  .stat-icon { font-size: 30px; margin-bottom: 6px; }
+  .stat-val { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+  .stat-label { font-size: 12px; color: rgba(255,255,255,0.33); margin-top: 2px; }
+
+  .tab-bar {
+    display: flex; gap: 2px; margin-bottom: 18px;
+    background: rgba(255,255,255,0.03); border-radius: 10px; padding: 4px; width: fit-content;
+  }
+  .tab-btn {
+    padding: 6px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; background: transparent; color: rgba(255,255,255,0.38);
+    font-weight: 400; font-family: inherit; transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn.active { background: rgba(255,255,255,0.07); color: var(--text); font-weight: 600; }
+
+  .query-box, .answer-box { padding: 14px 16px; border-radius: 10px; margin-bottom: 16px; }
+  .query-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); }
+  .answer-box { background: rgba(110,231,183,0.03); border: 1px solid rgba(110,231,183,0.08); }
+  .box-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .box-text { font-size: 13px; line-height: 1.8; color: rgba(255,255,255,0.65); white-space: pre-line; }
+  .query-box .box-label { color: rgba(255,255,255,0.28); }
+  .answer-box .box-label { color: rgba(110,231,183,0.5); }
+
+  .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .score-item { padding: 10px 14px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); }
+  .score-item-label { font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 7px; }
+  .score-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .score-track { flex: 1; height: 6px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+  .score-num { font-size: 13px; font-weight: 700; min-width: 28px; }
+
+  .highlight-box { padding: 12px 14px; background: rgba(110,231,183,0.04); border-radius: 10px; border: 1px solid rgba(110,231,183,0.1); margin-top: 14px; }
+  .highlight-label { font-size: 12px; color: var(--green); font-weight: 600; margin-bottom: 4px; }
+  .highlight-text { font-size: 13px; color: rgba(255,255,255,0.55); }
+  .issue-box { padding: 12px 14px; background: rgba(252,211,77,0.04); border-radius: 10px; border: 1px solid rgba(252,211,77,0.1); margin-top: 10px; }
+  .issue-label { font-size: 12px; color: var(--yellow); font-weight: 600; margin-bottom: 4px; }
+  .issue-text { font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+
+  /* ─── Radar SVG ───────────────────────────────────────────── */
+  .radar-wrap { display: flex; flex-direction: column; align-items: center; }
+  .radar-score { font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-top: 6px; }
+  .radar-denom { font-size: 13px; color: rgba(255,255,255,0.3); margin-left: 4px; }
+
+  /* ─── Bar chart ───────────────────────────────────────────── */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-label { font-size: 12px; color: rgba(255,255,255,0.38); width: 52px; text-align: right; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+  .bar-num { font-size: 12px; font-weight: 700; min-width: 34px; text-align: right; flex-shrink: 0; }
+
+  /* ─── Dataset cards ───────────────────────────────────────── */
+  .ds-card { cursor: pointer; transition: all 0.15s; }
+  .ds-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+  .ds-card-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px; }
+  .ds-card-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .ds-card-meta { font-size: 12px; color: rgba(255,255,255,0.3); margin-bottom: 16px; }
+  .ds-card-actions { display: flex; gap: 8px; }
+
+  /* ─── History table ───────────────────────────────────────── */
+  .history-table { width: 100%; border-collapse: collapse; }
+  .history-table th {
+    padding: 10px 16px; text-align: left;
+    font-size: 11px; color: rgba(255,255,255,0.28);
+    font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .history-table td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; vertical-align: middle; }
+  .history-table tr:last-child td { border-bottom: none; }
+  .history-table tr:hover td { background: rgba(255,255,255,0.01); }
+
+  /* ─── Status dot ──────────────────────────────────────────── */
+  .status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+  /* ─── Prompt library cards ────────────────────────────────── */
+  .prompt-card { cursor: default; }
+  .prompt-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .prompt-preview { padding: 12px 14px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 12px; line-height: 1.75; color: rgba(255,255,255,0.38); font-family: monospace; max-height: 90px; overflow: hidden; margin-bottom: 14px; }
+  .prompt-actions { display: flex; gap: 8px; }
+
+  /* ─── Toast ───────────────────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(16px);
+    background: rgba(16,20,28,0.96);
+    border: 1px solid rgba(110,231,183,0.2);
+    backdrop-filter: blur(24px); border-radius: 12px;
+    padding: 12px 22px; font-size: 14px; font-weight: 500;
+    color: var(--text); z-index: 9999; white-space: nowrap;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    opacity: 0; transition: all 0.25s ease; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ─── Misc ────────────────────────────────────────────────── */
+  textarea { font-family: inherit; }
+  ::selection { background: rgba(110,231,183,0.2); }
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .text-muted { color: rgba(255,255,255,0.3); }
+  .text-green { color: var(--green); }
+  .text-yellow { color: var(--yellow); }
+  .text-red { color: var(--red); }
+  .fw-600 { font-weight: 600; }
+  .fw-700 { font-weight: 700; }
+  .fw-800 { font-weight: 800; }
+  .fs-12 { font-size: 12px; }
+  .fs-13 { font-size: 13px; }
+  .fs-28 { font-size: 28px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav id="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-name"><span class="g">eval</span><span class="w">lab</span><span class="b">beta</span></div>
+    <div class="logo-sub">AI 回答质量评测平台</div>
+  </div>
+  <div class="nav-item active" onclick="showPage('eval')">
+    <span class="nav-icon">⚡</span><span>评测工作台</span>
+  </div>
+  <div class="nav-item" onclick="showPage('datasets')">
+    <span class="nav-icon">📁</span><span>数据集管理</span>
+  </div>
+  <div class="nav-item" onclick="showPage('prompts')">
+    <span class="nav-icon">💡</span><span>Prompt 灵感</span>
+  </div>
+  <div class="nav-item" onclick="showPage('history')">
+    <span class="nav-icon">🕐</span><span>历史任务</span>
+  </div>
+  <div class="sidebar-footer">
+    <div class="usage-card">
+      <div class="usage-label">本月用量</div>
+      <div class="usage-bar"><div class="usage-fill"></div></div>
+      <div class="usage-text">1,245 / 3,600 次调用</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main id="main">
+
+  <!-- ──────────── EVAL PAGE ──────────── -->
+  <div id="page-eval" class="page active">
+    <div class="page-header">
+      <h1>评测工作台</h1>
+      <p>配置并运行 AI 回答质量评测流程</p>
+    </div>
+
+    <!-- Step Bar -->
+    <div class="step-bar" id="step-bar">
+      <div class="step-item" onclick="jumpStep(1)">
+        <div class="step-circle active" id="sc1">1</div>
+        <span class="step-label active" id="sl1">上传数据集</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-item" onclick="jumpStep(2)">
+        <div class="step-circle" id="sc2">2</div>
+        <span class="step-label" id="sl2">编辑 Prompt</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-item" onclick="jumpStep(3)">
+        <div class="step-circle" id="sc3">3</div>
+        <span class="step-label" id="sl3">模型 &amp; 指标</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-item" onclick="jumpStep(4)">
+        <div class="step-circle" id="sc4">4</div>
+        <span class="step-label" id="sl4">质检结果</span>
+      </div>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="step1" class="step-content">
+      <div class="grid-2">
+        <div>
+          <div class="card mb-20">
+            <h3>上传数据集</h3>
+            <div class="upload-zone" id="upload-zone" onclick="activateUpload()">
+              <div class="upload-icon" id="upload-icon">📂</div>
+              <div class="upload-text" id="upload-text">点击上传 CSV / JSONL / Excel</div>
+              <div class="upload-sub" id="upload-sub">或从下方数据集库中选择</div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>快速选择已有数据集</h3>
+            <div class="ds-item selected" id="ds-korea" onclick="selectDataset('大众点评·韩餐推荐测试集', this)">
+              <div>
+                <div class="ds-name">大众点评·韩餐推荐测试集 <span class="badge badge-green">示例</span></div>
+                <div class="ds-meta">3 条 · 本地生活</div>
+              </div>
+              <span class="check-icon">✓</span>
+            </div>
+            <div class="ds-item" id="ds-cs" onclick="selectDataset('智能客服对话集-v2', this)">
+              <div>
+                <div class="ds-name">智能客服对话集-v2</div>
+                <div class="ds-meta">248 条 · 客服</div>
+              </div>
+              <span class="check-icon" style="opacity:0">✓</span>
+            </div>
+            <div class="ds-item" id="ds-content" onclick="selectDataset('内容创作评测集', this)">
+              <div>
+                <div class="ds-name">内容创作评测集</div>
+                <div class="ds-meta">120 条 · 内容</div>
+              </div>
+              <span class="check-icon" style="opacity:0">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>数据预览</h3>
+          <div id="preview-list">
+            <div class="preview-item">
+              <div class="preview-header" onclick="togglePreview(this)">
+                <span class="preview-qnum">Q1</span>
+                <span class="preview-query">帮我推荐一下附近五公里内有哪些好吃的韩国料理？最好是环境好、性价比高的那种。</span>
+                <span class="preview-arrow">▼</span>
+              </div>
+              <div class="preview-body">
+                <div class="preview-body-label">AI 回答预览</div>
+                您好！根据您的位置，为您推荐附近5公里内的热门韩餐：🥩 首尔烤肉·炭火烧烤（距您1.2km）人均¥89 ⭐4.7分，传统炭火烤五花肉，配菜免费续...
+              </div>
+            </div>
+            <div class="preview-item">
+              <div class="preview-header" onclick="togglePreview(this)">
+                <span class="preview-qnum">Q2</span>
+                <span class="preview-query">我想找一家可以做生日聚会的韩餐厅，10个人左右，有包间吗？预算每人100以内。</span>
+                <span class="preview-arrow">▼</span>
+              </div>
+              <div class="preview-body">
+                <div class="preview-body-label">AI 回答预览</div>
+                为您筛选了适合10人生日聚会的韩餐厅（含包间）：🎂 明洞·韩式烤肉宴（距您1.9km）人均¥85，包间2间最多12人，提供生日蛋糕切入服务...
+              </div>
+            </div>
+            <div class="preview-item">
+              <div class="preview-header" onclick="togglePreview(this)">
+                <span class="preview-qnum">Q3</span>
+                <span class="preview-query">最近有什么新开的韩餐推荐吗？想尝试一下网红店。</span>
+                <span class="preview-arrow">▼</span>
+              </div>
+              <div class="preview-body">
+                <div class="preview-body-label">AI 回答预览</div>
+                最近附近新开了几家超火韩餐：🔥 OSAM·欧萨姆创意韩料（新开1个月），小红书打卡量4200+，将韩国传统食材与法式摆盘结合...
+              </div>
+            </div>
+            <div class="flex gap-8" style="flex-wrap:wrap; margin-top: 8px;">
+              <span class="badge badge-blue">query ✓</span>
+              <span class="badge badge-blue">answer ✓</span>
+              <span class="badge badge-blue">tags ✓</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="span-2 flex justify-between align-center" style="padding: 0;">
+          <div></div>
+          <button class="btn btn-primary" onclick="goStep(2)">下一步：编辑 Prompt →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="step2" class="step-content" style="display:none">
+      <div style="display:grid; grid-template-columns: 280px 1fr; gap: 20px;">
+        <div class="card" style="align-self: start;">
+          <h3 style="font-size:13px; color:rgba(255,255,255,0.4)">灵感模板</h3>
+          <div class="tpl-item" onclick="applyTemplate(0)">
+            <div class="tpl-header"><span class="tpl-icon">🍽️</span><span class="tpl-name">餐饮推荐评估</span></div>
+            <div class="tpl-footer"><span class="badge badge-blue">本地服务</span><span>使用 128 次</span></div>
+          </div>
+          <div class="tpl-item" onclick="applyTemplate(1)">
+            <div class="tpl-header"><span class="tpl-icon">🎧</span><span class="tpl-name">客服对话质检</span></div>
+            <div class="tpl-footer"><span class="badge badge-blue">客服</span><span>使用 89 次</span></div>
+          </div>
+          <div class="tpl-item" onclick="applyTemplate(2)">
+            <div class="tpl-header"><span class="tpl-icon">✍️</span><span class="tpl-name">内容创作评估</span></div>
+            <div class="tpl-footer"><span class="badge badge-blue">内容</span><span>使用 67 次</span></div>
+          </div>
+          <div class="tpl-item" onclick="applyTemplate(3)">
+            <div class="tpl-header"><span class="tpl-icon">🧠</span><span class="tpl-name">知识问答准确性</span></div>
+            <div class="tpl-footer"><span class="badge badge-blue">知识库</span><span>使用 203 次</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="flex justify-between align-center mb-16">
+            <h3 style="margin:0">Prompt 编辑器</h3>
+            <span class="badge badge-yellow">变量：{query} {answer}</span>
+          </div>
+          <textarea class="prompt-editor" id="prompt-editor"></textarea>
+          <div class="flex justify-between" style="margin-top:16px">
+            <button class="btn btn-ghost" onclick="goStep(1)">← 返回</button>
+            <button class="btn btn-primary" onclick="goStep(3)">下一步：模型配置 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div id="step3" class="step-content" style="display:none">
+      <div class="grid-2 mb-20">
+        <div class="card">
+          <h3>模型选择</h3>
+          <div class="model-item selected" onclick="selectModel('claude-sonnet-4', this)">
+            <div>
+              <div class="model-name">Claude Sonnet 4 <span class="badge badge-green">推荐</span></div>
+              <div class="model-desc">均衡性能，推荐首选</div>
+            </div>
+            <div class="radio selected" id="radio-claude-sonnet-4"></div>
+          </div>
+          <div class="model-item" onclick="selectModel('claude-opus-4', this)">
+            <div>
+              <div class="model-name">Claude Opus 4 <span class="badge badge-purple">高精度</span></div>
+              <div class="model-desc">最高精度，复杂推理</div>
+            </div>
+            <div class="radio" id="radio-claude-opus-4"></div>
+          </div>
+          <div class="model-item" onclick="selectModel('gpt-4o', this)">
+            <div>
+              <div class="model-name">GPT-4o</div>
+              <div class="model-desc">OpenAI 旗舰模型</div>
+            </div>
+            <div class="radio" id="radio-gpt-4o"></div>
+          </div>
+          <div class="model-item" onclick="selectModel('gemini-pro', this)">
+            <div>
+              <div class="model-name">Gemini 1.5 Pro</div>
+              <div class="model-desc">长上下文，多模态</div>
+            </div>
+            <div class="radio" id="radio-gemini-pro"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>评估维度设定</h3>
+          <div class="dim-item selected" data-dim="completeness" data-color="#6EE7B7" onclick="toggleDim(this)">
+            <div class="dim-dot" style="background:#6EE7B7"></div>
+            <div class="flex-1">
+              <div class="dim-label" style="color:#6EE7B7">信息完整性</div>
+              <div class="dim-desc">关键字段覆盖率</div>
+            </div>
+            <div class="dim-check" style="background:#6EE7B7; border-color:#6EE7B7">✓</div>
+          </div>
+          <div class="dim-item selected" data-dim="relevance" data-color="#93C5FD" onclick="toggleDim(this)">
+            <div class="dim-dot" style="background:#93C5FD"></div>
+            <div class="flex-1">
+              <div class="dim-label" style="color:#93C5FD">需求匹配度</div>
+              <div class="dim-desc">理解用户意图的准确程度</div>
+            </div>
+            <div class="dim-check" style="background:#93C5FD; border-color:#93C5FD">✓</div>
+          </div>
+          <div class="dim-item selected" data-dim="actionability" data-color="#FCA5A5" onclick="toggleDim(this)">
+            <div class="dim-dot" style="background:#FCA5A5"></div>
+            <div class="flex-1">
+              <div class="dim-label" style="color:#FCA5A5">可操作性</div>
+              <div class="dim-desc">推荐的落地可行程度</div>
+            </div>
+            <div class="dim-check" style="background:#FCA5A5; border-color:#FCA5A5">✓</div>
+          </div>
+          <div class="dim-item selected" data-dim="fluency" data-color="#FCD34D" onclick="toggleDim(this)">
+            <div class="dim-dot" style="background:#FCD34D"></div>
+            <div class="flex-1">
+              <div class="dim-label" style="color:#FCD34D">表达流畅度</div>
+              <div class="dim-desc">语言质量与结构</div>
+            </div>
+            <div class="dim-check" style="background:#FCD34D; border-color:#FCD34D">✓</div>
+          </div>
+          <div class="dim-item selected" data-dim="safety" data-color="#C4B5FD" onclick="toggleDim(this)">
+            <div class="dim-dot" style="background:#C4B5FD"></div>
+            <div class="flex-1">
+              <div class="dim-label" style="color:#C4B5FD">安全合规</div>
+              <div class="dim-desc">内容合法合规检测</div>
+            </div>
+            <div class="dim-check" style="background:#C4B5FD; border-color:#C4B5FD">✓</div>
+          </div>
+          <div class="dim-item" data-dim="freshness" data-color="#F9A8D4" onclick="toggleDim(this)">
+            <div class="dim-dot"></div>
+            <div class="flex-1">
+              <div class="dim-label">时效性</div>
+              <div class="dim-desc">信息是否最新准确</div>
+            </div>
+            <div class="dim-check">　</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-2">
+        <div class="flex justify-between align-center">
+          <div>
+            <div class="fw-600 mb-8">配置汇总</div>
+            <div class="config-summary">
+              <span>📁 <span id="sum-dataset">大众点评·韩餐推荐测试集</span></span>
+              <span>🤖 <span id="sum-model">claude-sonnet-4</span></span>
+              <span>📊 <span id="sum-dims">5</span> 个维度</span>
+              <span>📝 3 条样本</span>
+            </div>
+          </div>
+          <div class="flex gap-12">
+            <button class="btn btn-ghost" onclick="goStep(2)">← 返回</button>
+            <button class="btn btn-primary" id="start-btn" onclick="startEval()">🚀 开始评测</button>
+          </div>
+        </div>
+        <div class="progress-wrap" id="progress-wrap" style="display:none">
+          <div class="progress-header">
+            <span class="text-muted">评测进行中...</span>
+            <span class="text-green fw-600" id="progress-pct">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="progress-steps">
+            <span class="pstep" id="ps1">加载数据集</span>
+            <span class="pstep" id="ps2">构建 Prompt</span>
+            <span class="pstep" id="ps3">模型推理中</span>
+            <span class="pstep" id="ps4">汇总评分</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-between" style="margin-top:0; grid-column: 1/-1;"></div>
+    </div>
+
+    <!-- Step 4 -->
+    <div id="step4" class="step-content" style="display:none">
+      <div class="grid-4 mb-20">
+        <div class="card stat-card">
+          <div class="stat-icon">📝</div>
+          <div class="stat-val text-blue">3</div>
+          <div class="stat-label">样本总数</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-val text-yellow">4.4</div>
+          <div class="stat-label">综合得分</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon">🏆</div>
+          <div class="stat-val text-green">67%</div>
+          <div class="stat-label">优秀率</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-val text-red">3</div>
+          <div class="stat-label">问题项</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 300px; gap: 20px;">
+        <div>
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab(0, this)">样本 1 <span class="badge badge-green">优秀</span></button>
+            <button class="tab-btn" onclick="switchTab(1, this)">样本 2 <span class="badge badge-green">优秀</span></button>
+            <button class="tab-btn" onclick="switchTab(2, this)">样本 3 <span class="badge badge-yellow">良好</span></button>
+          </div>
+          <div id="result-panel" class="card"><!-- filled by JS --></div>
+        </div>
+        <div>
+          <div class="card mb-16">
+            <h3 style="font-size:13px; color:rgba(255,255,255,0.38); font-weight:600">综合雷达图</h3>
+            <div class="radar-wrap">
+              <svg id="radar-svg" viewBox="0 0 200 200" style="width:100%; max-width:200px"></svg>
+              <div><span class="radar-score" id="radar-score">4.6</span><span class="radar-denom">/ 5.0</span></div>
+            </div>
+          </div>
+          <div class="card mb-16">
+            <h3 style="font-size:13px; color:rgba(255,255,255,0.38); font-weight:600; margin-bottom:14px">各样本得分</h3>
+            <div id="all-scores"></div>
+          </div>
+          <button class="btn btn-primary btn-full" style="padding:13px" onclick="toast('📊 报告已导出为 PDF')">导出评测报告</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────── DATASETS PAGE ──────────── -->
+  <div id="page-datasets" class="page">
+    <div class="page-header-row">
+      <div><h1 style="font-size:26px; font-weight:800; letter-spacing:-0.5px">数据集管理</h1><p style="color:var(--muted); margin-top:5px; font-size:14px">管理和维护评测数据集</p></div>
+      <button class="btn btn-primary" onclick="toast('✅ 新建数据集入口')">+ 新建数据集</button>
+    </div>
+    <div class="grid-3">
+      <div class="card ds-card" onclick="toast('👀 预览：大众点评·韩餐推荐测试集')">
+        <div class="ds-card-icon">🗺️</div>
+        <div class="flex justify-between align-center mb-8">
+          <div class="ds-card-name">大众点评·韩餐推荐测试集</div>
+          <span class="badge badge-green">活跃</span>
+        </div>
+        <div class="ds-card-meta">3 条样本 · 本地生活 · 上次运行 2025-03-10</div>
+        <div class="ds-card-actions">
+          <button class="btn btn-secondary btn-sm flex-1" onclick="event.stopPropagation(); toast('👀 预览数据集')">预览</button>
+          <button class="btn btn-ghost btn-sm flex-1" onclick="event.stopPropagation(); toast('✏️ 编辑数据集')">编辑</button>
+        </div>
+      </div>
+      <div class="card ds-card" onclick="toast('👀 预览：智能客服对话集-v2')">
+        <div class="ds-card-icon">🎧</div>
+        <div class="flex justify-between align-center mb-8">
+          <div class="ds-card-name">智能客服对话集-v2</div>
+          <span class="badge badge-green">活跃</span>
+        </div>
+        <div class="ds-card-meta">248 条样本 · 客服 · 上次运行 2025-03-08</div>
+        <div class="ds-card-actions">
+          <button class="btn btn-secondary btn-sm flex-1" onclick="event.stopPropagation(); toast('👀 预览数据集')">预览</button>
+          <button class="btn btn-ghost btn-sm flex-1" onclick="event.stopPropagation(); toast('✏️ 编辑数据集')">编辑</button>
+        </div>
+      </div>
+      <div class="card ds-card" onclick="toast('👀 预览：内容创作评测集')">
+        <div class="ds-card-icon">✍️</div>
+        <div class="flex justify-between align-center mb-8">
+          <div class="ds-card-name">内容创作评测集</div>
+          <span class="badge badge-green">活跃</span>
+        </div>
+        <div class="ds-card-meta">120 条样本 · 内容 · 上次运行 2025-03-01</div>
+        <div class="ds-card-actions">
+          <button class="btn btn-secondary btn-sm flex-1" onclick="event.stopPropagation(); toast('👀 预览数据集')">预览</button>
+          <button class="btn btn-ghost btn-sm flex-1" onclick="event.stopPropagation(); toast('✏️ 编辑数据集')">编辑</button>
+        </div>
+      </div>
+      <div class="card ds-card" onclick="toast('📦 已归档数据集')">
+        <div class="ds-card-icon">📚</div>
+        <div class="flex justify-between align-center mb-8">
+          <div class="ds-card-name">知识问答基准集</div>
+          <span class="badge badge-muted">归档</span>
+        </div>
+        <div class="ds-card-meta">500 条样本 · 知识库 · 上次运行 2025-02-20</div>
+        <div class="ds-card-actions">
+          <button class="btn btn-secondary btn-sm flex-1" onclick="event.stopPropagation(); toast('👀 预览数据集')">预览</button>
+          <button class="btn btn-ghost btn-sm flex-1" onclick="event.stopPropagation(); toast('🔓 恢复数据集')">恢复</button>
+        </div>
+      </div>
+      <div class="card ds-card" onclick="toast('👀 预览：安全红线测试集')">
+        <div class="ds-card-icon">🛡️</div>
+        <div class="flex justify-between align-center mb-8">
+          <div class="ds-card-name">安全红线测试集</div>
+          <span class="badge badge-green">活跃</span>
+        </div>
+        <div class="ds-card-meta">80 条样本 · 安全 · 上次运行 2025-02-18</div>
+        <div class="ds-card-actions">
+          <button class="btn btn-secondary btn-sm flex-1" onclick="event.stopPropagation(); toast('👀 预览数据集')">预览</button>
+          <button class="btn btn-ghost btn-sm flex-1" onclick="event.stopPropagation(); toast('✏️ 编辑数据集')">编辑</button>
+        </div>
+      </div>
+      <div class="card ds-card" onclick="toast('📝 草稿数据集')">
+        <div class="ds-card-icon">💬</div>
+        <div class="flex justify-between align-center mb-8">
+          <div class="ds-card-name">多轮对话集-beta</div>
+          <span class="badge badge-yellow">草稿</span>
+        </div>
+        <div class="ds-card-meta">60 条样本 · 对话 · 从未运行</div>
+        <div class="ds-card-actions">
+          <button class="btn btn-secondary btn-sm flex-1" onclick="event.stopPropagation(); toast('👀 预览数据集')">预览</button>
+          <button class="btn btn-ghost btn-sm flex-1" onclick="event.stopPropagation(); toast('✏️ 完善草稿')">完善</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────── PROMPTS PAGE ──────────── -->
+  <div id="page-prompts" class="page">
+    <div class="page-header-row">
+      <div><h1 style="font-size:26px; font-weight:800; letter-spacing:-0.5px">Prompt 灵感库</h1><p style="color:var(--muted); margin-top:5px; font-size:14px">浏览和管理评测 Prompt 模板</p></div>
+      <button class="btn btn-primary" onclick="toast('✅ 新建 Prompt 模板')">+ 创建模板</button>
+    </div>
+    <div class="grid-2">
+      <div class="card prompt-card">
+        <div class="prompt-card-header">
+          <div class="flex align-center gap-12">
+            <span style="font-size:28px">🍽️</span>
+            <div><div style="font-weight:600; font-size:15px">餐饮推荐评估</div><div style="margin-top:4px"><span class="badge badge-blue">本地服务</span></div></div>
+          </div>
+          <span style="font-size:12px; color:rgba(255,255,255,0.3)">使用 128 次</span>
+        </div>
+        <div class="prompt-preview">你是一个专业的AI回答质量评估员。请从以下维度对AI的餐饮推荐回答进行评分（1-5分）：
+用户问题：{query}  AI回答：{answer}
+评估维度：1.信息完整性 2.个性化匹配 3.实用性 4.表达流畅度 5.安全合规</div>
+        <div class="prompt-actions">
+          <button class="btn btn-secondary flex-1 btn-sm" onclick="applyAndGoPrompt(0)">应用模板</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('📋 已复制到剪贴板')">复制</button>
+        </div>
+      </div>
+      <div class="card prompt-card">
+        <div class="prompt-card-header">
+          <div class="flex align-center gap-12">
+            <span style="font-size:28px">🎧</span>
+            <div><div style="font-weight:600; font-size:15px">客服对话质检</div><div style="margin-top:4px"><span class="badge badge-blue">客服</span></div></div>
+          </div>
+          <span style="font-size:12px; color:rgba(255,255,255,0.3)">使用 89 次</span>
+        </div>
+        <div class="prompt-preview">作为质检专家，请评估以下客服AI对话质量：
+问题：{query}  回答：{answer}
+重点关注：解决率、情感安抚、专业度、是否有错误引导。请输出结构化评分报告。</div>
+        <div class="prompt-actions">
+          <button class="btn btn-secondary flex-1 btn-sm" onclick="applyAndGoPrompt(1)">应用模板</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('📋 已复制到剪贴板')">复制</button>
+        </div>
+      </div>
+      <div class="card prompt-card">
+        <div class="prompt-card-header">
+          <div class="flex align-center gap-12">
+            <span style="font-size:28px">✍️</span>
+            <div><div style="font-weight:600; font-size:15px">内容创作评估</div><div style="margin-top:4px"><span class="badge badge-blue">内容</span></div></div>
+          </div>
+          <span style="font-size:12px; color:rgba(255,255,255,0.3)">使用 67 次</span>
+        </div>
+        <div class="prompt-preview">请评估AI生成内容的质量，关注创意性、准确性、可读性和目标受众匹配度。
+原始需求：{query}  生成内容：{answer}
+输出JSON评分，包含各维度分数和综合建议。</div>
+        <div class="prompt-actions">
+          <button class="btn btn-secondary flex-1 btn-sm" onclick="applyAndGoPrompt(2)">应用模板</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('📋 已复制到剪贴板')">复制</button>
+        </div>
+      </div>
+      <div class="card prompt-card">
+        <div class="prompt-card-header">
+          <div class="flex align-center gap-12">
+            <span style="font-size:28px">🧠</span>
+            <div><div style="font-weight:600; font-size:15px">知识问答准确性</div><div style="margin-top:4px"><span class="badge badge-blue">知识库</span></div></div>
+          </div>
+          <span style="font-size:12px; color:rgba(255,255,255,0.3)">使用 203 次</span>
+        </div>
+        <div class="prompt-preview">请评估AI知识问答的准确性和完整性。
+问题：{query}  回答：{answer}
+检查：事实正确性、逻辑严谨性、知识边界声明、引用可靠性。给出1-5分评分。</div>
+        <div class="prompt-actions">
+          <button class="btn btn-secondary flex-1 btn-sm" onclick="applyAndGoPrompt(3)">应用模板</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('📋 已复制到剪贴板')">复制</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────── HISTORY PAGE ──────────── -->
+  <div id="page-history" class="page">
+    <div class="page-header">
+      <h1 style="font-size:26px; font-weight:800; letter-spacing:-0.5px">历史任务</h1>
+      <p style="color:var(--muted); margin-top:5px; font-size:14px">查看所有评测任务记录</p>
+    </div>
+    <div class="card" style="padding: 0; overflow:hidden;">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>任务名称</th><th>状态</th><th>日期</th><th>模型</th><th>样本数</th><th>综合评分</th><th>维度</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600">大众点评餐饮推荐Q3质检</td>
+            <td><span class="status" style="color:#6EE7B7"><span class="status-dot" style="background:#6EE7B7"></span>完成</span></td>
+            <td class="text-muted">2025-03-08</td>
+            <td><span class="badge badge-purple">claude-sonnet-4</span></td>
+            <td class="text-muted">248</td>
+            <td style="font-weight:700; color:#6EE7B7">4.2</td>
+            <td><span class="badge badge-muted" style="margin-right:4px">信息完整性</span><span class="badge badge-muted">个性化</span></td>
+            <td><button class="btn btn-secondary btn-sm" onclick="loadHistoryResult()">查看报告</button></td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">智能客服回答优化评估</td>
+            <td><span class="status" style="color:#FCD34D"><span class="status-dot" style="background:#FCD34D; box-shadow: 0 0 6px #FCD34D"></span>运行中</span></td>
+            <td class="text-muted">2025-03-10</td>
+            <td><span class="badge badge-purple">gpt-4o</span></td>
+            <td class="text-muted">120</td>
+            <td style="font-weight:700; color:#FCD34D">3.8</td>
+            <td><span class="badge badge-muted" style="margin-right:4px">解决率</span><span class="badge badge-muted">情感</span></td>
+            <td><button class="btn btn-ghost btn-sm" onclick="toast('⏳ 任务运行中，请稍候')">进行中...</button></td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">本地生活推荐AB测试</td>
+            <td><span class="status" style="color:#6EE7B7"><span class="status-dot" style="background:#6EE7B7"></span>完成</span></td>
+            <td class="text-muted">2025-03-05</td>
+            <td><span class="badge badge-purple">claude-opus-4</span></td>
+            <td class="text-muted">500</td>
+            <td style="font-weight:700; color:#6EE7B7">4.6</td>
+            <td><span class="badge badge-muted" style="margin-right:4px">准确率</span><span class="badge badge-muted">覆盖度</span></td>
+            <td><button class="btn btn-secondary btn-sm" onclick="loadHistoryResult()">查看报告</button></td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">内容安全红线检测</td>
+            <td><span class="status" style="color:#FCA5A5"><span class="status-dot" style="background:#FCA5A5"></span>失败</span></td>
+            <td class="text-muted">2025-03-01</td>
+            <td><span class="badge badge-purple">claude-sonnet-4</span></td>
+            <td class="text-muted">80</td>
+            <td class="text-muted">—</td>
+            <td><span class="badge badge-muted">合规性</span></td>
+            <td><button class="btn btn-ghost btn-sm" onclick="toast('🔍 查看错误日志')">详情</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ═══ DATA ═══════════════════════════════════════════════
+const PROMPTS = [
+  `你是一个专业的AI回答质量评估员。请从以下维度对AI的餐饮推荐回答进行评分（1-5分）：
+
+用户问题：{query}
+AI回答：{answer}
+
+评估维度：
+1. 信息完整性：是否包含地址、评分、人均价格等关键信息
+2. 个性化匹配：是否精准理解用户需求（距离、价格、场景）
+3. 实用性：推荐是否具有可操作性（预约方式、注意事项）
+4. 表达流畅度：回答是否结构清晰、易于阅读
+5. 安全合规：是否存在虚假信息或诱导消费
+
+请输出JSON格式评分结果。`,
+  `作为质检专家，请评估以下客服AI对话质量：
+
+问题：{query}
+回答：{answer}
+
+请重点关注：解决率、情感安抚、专业度、是否有错误引导`,
+  `请评估AI生成内容的质量，关注创意性、准确性、可读性和目标受众匹配度。
+
+原始需求：{query}
+生成内容：{answer}`,
+  `请评估AI知识问答的准确性和完整性，检查事实正确性、逻辑严谨性、知识边界声明。`
+];
+
+const RESULTS = [
+  {
+    query: "帮我推荐一下附近五公里内有哪些好吃的韩国料理？最好是环境好、性价比高的那种。",
+    answer: `您好！根据您的位置，为您推荐附近5公里内的热门韩餐：
+
+🥩 首尔烤肉·炭火烧烤（距您1.2km）
+人均：¥89  ⭐4.7分 | 月销2300+
+特色：传统炭火烤五花肉，配菜免费续，环境韩式复古风
+
+🍲 济州岛·正宗韩式料理（距您2.8km）
+人均：¥65  ⭐4.5分 | 月销1800+
+特色：部队锅、石锅拌饭是招牌，午市套餐超划算
+
+🍜 弘大·年糕炒鸡专门店（距您3.5km）
+人均：¥48  ⭐4.6分 | 月销3100+
+特色：辣炒年糕配拉面，小食多样，适合闺蜜聚餐
+
+以上均支持在线预约，建议提前订位，需要查看详细菜单或导航吗？`,
+    scores: { completeness: 4.8, relevance: 4.5, actionability: 4.7, fluency: 4.9, safety: 5.0 },
+    verdict: "优秀", verdictColor: "#6EE7B7",
+    highlight: "完整提供价格/评分/距离，推荐多样化，引导流程清晰",
+    issues: []
+  },
+  {
+    query: "我想找一家可以做生日聚会的韩餐厅，10个人左右，有包间吗？预算每人100以内。",
+    answer: `为您筛选了适合10人生日聚会的韩餐厅（含包间）：
+
+🎂 明洞·韩式烤肉宴（距您1.9km）
+人均：¥85 | 包间：✅ 2间（最多12人）
+优势：提供生日蛋糕切入服务，可提前布置，免开瓶费
+
+🎉 汉江·韩式料理（距您3.1km）
+人均：¥95 | 包间：✅ 3间（8-15人灵活）
+优势：有专属生日套餐，赠送小蛋糕+拍立得
+
+💡 预订小贴士：
+- 建议提前3天预约包间
+- 告知生日主题，商家可协助布置
+- 可询问能否外带蛋糕
+
+需要我帮您直接联系商家确认档期吗？`,
+    scores: { completeness: 4.6, relevance: 4.8, actionability: 4.9, fluency: 4.7, safety: 5.0 },
+    verdict: "优秀", verdictColor: "#6EE7B7",
+    highlight: "精准匹配包间+生日场景需求，预订建议非常实用",
+    issues: ["包间数量信息可能不实时准确"]
+  },
+  {
+    query: "最近有什么新开的韩餐推荐吗？想尝试一下网红店。",
+    answer: `最近附近新开了几家超火韩餐，给您种草：
+
+🔥 OSAM·欧萨姆创意韩料（新开1个月）
+人均：¥120 | 小红书打卡量：4200+
+亮点：将韩国传统食材与法式摆盘结合，拍照氛围感拉满
+
+✨ 吃饱了·韩式家常料理（新开3周）
+人均：¥58 | 抖音视频播放：38万
+亮点：老奶奶秘方大酱汤，复古街头风装修
+
+📍 BBANG·韩国面包工坊（新开2周）
+人均：¥35 | 周末排队：40分钟
+亮点：现烤盐奶油面包+韩式拿铁，下午茶首选
+
+⚠️ 网红店建议错峰前往，工作日中午或开门前半小时到！`,
+    scores: { completeness: 3.9, relevance: 4.2, actionability: 3.6, fluency: 4.8, safety: 4.5 },
+    verdict: "良好", verdictColor: "#FCD34D",
+    highlight: "网红店推荐有新鲜感，内容生动有趣",
+    issues: ["缺少具体地址", "无法确认营业时间"]
+  }
+];
+
+const DIM_LABELS = { completeness: "信息完整性", relevance: "需求匹配度", actionability: "可操作性", fluency: "表达流畅度", safety: "安全合规" };
+const DIM_COLORS = { completeness: "#6EE7B7", relevance: "#93C5FD", actionability: "#FCA5A5", fluency: "#FCD34D", safety: "#C4B5FD" };
+
+// ═══ STATE ═══════════════════════════════════════════════
+let currentStep = 1;
+let selectedDataset = "大众点评·韩餐推荐测试集";
+let selectedModel = "claude-sonnet-4";
+let selectedDims = new Set(["completeness","relevance","actionability","fluency","safety"]);
+let currentResultTab = 0;
+let evalDone = false;
+
+// ═══ INIT ════════════════════════════════════════════════
+document.getElementById('prompt-editor').value = PROMPTS[0];
+renderResult(0);
+renderAllScores();
+
+// ═══ NAVIGATION ══════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ═══ STEP WIZARD ═════════════════════════════════════════
+function goStep(n) {
+  if (n > 4) return;
+  showStep(n);
+}
+
+function jumpStep(n) {
+  if (n <= currentStep || evalDone) showStep(n);
+}
+
+function showStep(n) {
+  currentStep = n;
+  for (let i = 1; i <= 4; i++) {
+    const sc = document.getElementById('sc' + i);
+    const sl = document.getElementById('sl' + i);
+    const s = document.getElementById('step' + i);
+    if (s) s.style.display = (i === n) ? '' : 'none';
+    sc.className = 'step-circle' + (i === n ? ' active' : (i < n || evalDone && i === 4) ? ' done' : '');
+    sc.textContent = (i < n) ? '✓' : i;
+    sl.className = 'step-label' + (i === n ? ' active' : '');
+  }
+}
+
+// ═══ UPLOAD / DATASET ════════════════════════════════════
+function activateUpload() {
+  const zone = document.getElementById('upload-zone');
+  zone.classList.add('active');
+  document.getElementById('upload-icon').textContent = '✅';
+  document.getElementById('upload-text').style.color = 'var(--green)';
+  document.getElementById('upload-text').textContent = '大众点评·韩餐推荐测试集';
+  document.getElementById('upload-sub').textContent = '3 条 · query + answer · JSONL';
+  toast('✅ 数据集加载成功，共 3 条样本');
+}
+
+function selectDataset(name, el) {
+  selectedDataset = name;
+  document.getElementById('sum-dataset').textContent = name;
+  document.querySelectorAll('.ds-item').forEach(d => {
+    d.classList.remove('selected');
+    d.querySelector('.check-icon').style.opacity = '0';
+  });
+  el.classList.add('selected');
+  el.querySelector('.check-icon').style.opacity = '1';
+  toast('✅ 已选择：' + name);
+}
+
+// ═══ PREVIEW TOGGLE ══════════════════════════════════════
+function togglePreview(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.preview-arrow');
+  body.classList.toggle('open');
+  arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+// ═══ PROMPT TEMPLATES ════════════════════════════════════
+function applyTemplate(i) {
+  document.getElementById('prompt-editor').value = PROMPTS[i];
+  toast('📋 已应用模板');
+}
+
+function applyAndGoPrompt(i) {
+  applyTemplate(i);
+  showPage('eval'); // won't work without event, just toast
+  toast('📋 模板已应用，前往评测工作台使用');
+}
+
+// ═══ MODEL SELECTION ══════════════════════════════════════
+function selectModel(id, el) {
+  selectedModel = id;
+  document.getElementById('sum-model').textContent = id;
+  document.querySelectorAll('.model-item').forEach(m => m.classList.remove('selected'));
+  document.querySelectorAll('.radio').forEach(r => r.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('radio-' + id).classList.add('selected');
+}
+
+// ═══ DIMENSION TOGGLE ════════════════════════════════════
+function toggleDim(el) {
+  const dim = el.dataset.dim;
+  const color = el.dataset.color;
+  const check = el.querySelector('.dim-check');
+  const dot = el.querySelector('.dim-dot');
+  const label = el.querySelector('.dim-label');
+  if (selectedDims.has(dim)) {
+    selectedDims.delete(dim);
+    el.classList.remove('selected');
+    check.textContent = '　'; check.style.background = 'transparent'; check.style.borderColor = 'rgba(255,255,255,0.12)';
+    dot.style.background = 'rgba(255,255,255,0.12)';
+    label.style.color = 'rgba(255,255,255,0.45)';
+  } else {
+    selectedDims.add(dim);
+    el.classList.add('selected');
+    check.textContent = '✓'; check.style.background = color; check.style.borderColor = color;
+    dot.style.background = color;
+    label.style.color = color;
+  }
+  document.getElementById('sum-dims').textContent = selectedDims.size;
+}
+
+// ═══ EVAL PROGRESS ═══════════════════════════════════════
+function startEval() {
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('start-btn').textContent = '评测中...';
+  document.getElementById('progress-wrap').style.display = '';
+  let pct = 0;
+  const fill = document.getElementById('progress-fill');
+  const pctEl = document.getElementById('progress-pct');
+  const steps = [
+    [20, 'ps1'], [45, 'ps2'], [70, 'ps3'], [90, 'ps4']
+  ];
+  const iv = setInterval(() => {
+    pct += Math.random() * 7 + 2;
+    if (pct >= 100) { pct = 100; clearInterval(iv); setTimeout(() => { evalDone = true; goStep(4); }, 450); }
+    fill.style.width = Math.min(pct, 100) + '%';
+    pctEl.textContent = Math.round(Math.min(pct, 100)) + '%';
+    steps.forEach(([threshold, id]) => { if (pct >= threshold) document.getElementById(id).classList.add('done'); });
+  }, 180);
+}
+
+// ═══ RESULTS ═════════════════════════════════════════════
+function switchTab(i, btn) {
+  currentResultTab = i;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderResult(i);
+  renderRadar(i);
+}
+
+function renderResult(i) {
+  const r = RESULTS[i];
+  const panel = document.getElementById('result-panel');
+  if (!panel) return;
+  let scoresHtml = '';
+  Object.entries(r.scores).forEach(([key, val]) => {
+    const color = DIM_COLORS[key] || '#888';
+    const label = DIM_LABELS[key] || key;
+    const w = (val / 5 * 100).toFixed(0);
+    scoresHtml += `
+      <div class="score-item">
+        <div class="score-item-label">${label}</div>
+        <div class="score-bar-wrap">
+          <div class="score-track"><div class="score-fill" style="width:${w}%; background:${color}"></div></div>
+          <span class="score-num" style="color:${color}">${val}</span>
+        </div>
+      </div>`;
+  });
+  let issuesHtml = r.issues.length ? `<div class="issue-box"><div class="issue-label">⚠️ 问题项</div>${r.issues.map(is => `<div class="issue-text">· ${is}</div>`).join('')}</div>` : '';
+  panel.innerHTML = `
+    <div class="query-box"><div class="box-label">USER QUERY</div><div class="box-text">${r.query}</div></div>
+    <div class="answer-box"><div class="box-label">AI ANSWER</div><div class="box-text">${r.answer}</div></div>
+    <div class="score-grid">${scoresHtml}</div>
+    <div class="highlight-box"><div class="highlight-label">💡 亮点</div><div class="highlight-text">${r.highlight}</div></div>
+    ${issuesHtml}`;
+  renderRadar(i);
+}
+
+function renderRadar(i) {
+  const r = RESULTS[i];
+  const scores = r.scores;
+  const keys = Object.keys(scores);
+  const n = keys.length;
+  const cx = 100, cy = 100, radius = 68;
+  const angle = (idx) => (Math.PI * 2 * idx) / n - Math.PI / 2;
+  const pt = (idx, val) => {
+    const a = angle(idx), rat = val / 5;
+    return [cx + radius * rat * Math.cos(a), cy + radius * rat * Math.sin(a)];
+  };
+  let svg = '';
+  // grid
+  [1,2,3,4,5].forEach(lv => {
+    const pts = keys.map((_,i) => { const a = angle(i), r2 = lv/5; return `${cx+radius*r2*Math.cos(a)},${cy+radius*r2*Math.sin(a)}`; }).join(' ');
+    svg += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.065)" stroke-width="1"/>`;
+  });
+  // axes
+  keys.forEach((_,i) => {
+    svg += `<line x1="${cx}" y1="${cy}" x2="${cx+radius*Math.cos(angle(i))}" y2="${cy+radius*Math.sin(angle(i))}" stroke="rgba(255,255,255,0.055)" stroke-width="1"/>`;
+  });
+  // data polygon
+  const poly = keys.map((k,i) => pt(i, scores[k]).join(',')).join(' ');
+  svg += `<polygon points="${poly}" fill="rgba(110,231,183,0.13)" stroke="#6EE7B7" stroke-width="1.5"/>`;
+  // dots
+  keys.forEach((k,i) => {
+    const [x,y] = pt(i, scores[k]);
+    svg += `<circle cx="${x}" cy="${y}" r="3" fill="#6EE7B7"/>`;
+  });
+  // labels
+  const shortLabels = { completeness:"完整", relevance:"匹配", actionability:"实用", fluency:"流畅", safety:"合规" };
+  keys.forEach((k,i) => {
+    const a = angle(i);
+    const lx = cx + (radius+16)*Math.cos(a), ly = cy + (radius+16)*Math.sin(a);
+    svg += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.42)" font-size="8" font-family="DM Sans, sans-serif">${shortLabels[k]||k}</text>`;
+  });
+  document.getElementById('radar-svg').innerHTML = svg;
+  const avg = (Object.values(scores).reduce((a,b)=>a+b,0)/Object.values(scores).length).toFixed(1);
+  const scoreEl = document.getElementById('radar-score');
+  if (scoreEl) { scoreEl.textContent = avg; scoreEl.style.color = r.verdictColor; }
+}
+
+function renderAllScores() {
+  const el = document.getElementById('all-scores');
+  if (!el) return;
+  RESULTS.forEach((r,i) => {
+    const avg = (Object.values(r.scores).reduce((a,b)=>a+b,0)/Object.values(r.scores).length).toFixed(1);
+    const w = (parseFloat(avg)/5*100).toFixed(0);
+    el.innerHTML += `
+      <div class="bar-row">
+        <span class="bar-label">样本 ${i+1}</span>
+        <div class="bar-track"><div class="score-fill" style="width:${w}%; background:${r.verdictColor}"></div></div>
+        <span class="bar-num" style="color:${r.verdictColor}">${avg}</span>
+      </div>`;
+  });
+}
+
+function loadHistoryResult() {
+  // Switch to eval page, step 4
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-eval').classList.add('active');
+  document.querySelector('.nav-item').classList.add('active');
+  evalDone = true;
+  goStep(4);
+  toast('📊 已加载历史评测报告');
+}
+
+// ═══ TOAST ═══════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+</script>
+</body>
+</html>
