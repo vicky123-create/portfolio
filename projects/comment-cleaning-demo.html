@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>评论清洗 Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div>
+          <div class="eyebrow">AI 产品经理作品集 Demo</div>
+          <h1>评论清洗与可解释过滤</h1>
+          <p class="sub">
+            规则 + 模型融合，支持可解释、可回滚与人机协同。
+          </p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnAuto">一键清洗</button>
+          <button class="btn" id="btnReset">重置</button>
+          <button class="btn ghost" id="btnExport">导出报表</button>
+        </div>
+      </header>
+
+      <section class="cards" id="metrics">
+        <div class="card">
+          <div class="label">总评论</div>
+          <div class="value" id="metricTotal">-</div>
+          <div class="hint">数据规模</div>
+        </div>
+        <div class="card">
+          <div class="label">噪声占比</div>
+          <div class="value" id="metricNoiseRate">-</div>
+          <div class="hint">规则 + 模型判定</div>
+        </div>
+        <div class="card">
+          <div class="label">清洗后有效率</div>
+          <div class="value" id="metricEffective">-</div>
+          <div class="hint" id="metricLift">提升 -</div>
+        </div>
+        <div class="card">
+          <div class="label">预计节省人力</div>
+          <div class="value" id="metricSaved">-</div>
+          <div class="hint">按 5 秒/条估算</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">筛选条件</div>
+        <div class="filters">
+          <div class="filter-group">
+            <div class="filter-label">噪声类型</div>
+            <div class="chips" id="typeChips"></div>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label" for="threshold">噪声阈值</label>
+            <div class="range">
+              <input id="threshold" type="range" min="0.4" max="0.95" step="0.05" />
+              <span class="range-value" id="thresholdValue">0.70</span>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label" for="search">搜索评论</label>
+            <input id="search" class="input" placeholder="输入关键词，例如：广告/客服/物流" />
+          </div>
+          <div class="filter-group toggle-group">
+            <label class="toggle">
+              <input id="onlyNoise" type="checkbox" />
+              <span>仅显示将被清洗</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">评论列表</div>
+        <div class="table">
+          <div class="row head">
+            <div>评论内容</div>
+            <div>类型</div>
+            <div>置信度</div>
+            <div>可解释理由</div>
+            <div>操作</div>
+          </div>
+          <div id="tableBody"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">规则配置（示例）</div>
+        <div class="rules">
+          <div class="rule">
+            <div class="rule-title">低信息密度</div>
+            <div class="rule-desc">长度 &lt; 5 或高频口头词占比 &gt; 60%</div>
+          </div>
+          <div class="rule">
+            <div class="rule-title">广告引流</div>
+            <div class="rule-desc">命中黑名单词 + 外链特征</div>
+          </div>
+          <div class="rule">
+            <div class="rule-title">重复评论</div>
+            <div class="rule-desc">相似度 &gt; 0.92，近 7 天内重复</div>
+          </div>
+          <div class="rule">
+            <div class="rule-title">机器人模板</div>
+            <div class="rule-desc">模板句式 + 低词汇多样性</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">迭代效果对比</div>
+        <div class="compare">
+          <div class="compare-head">
+            <div>版本</div>
+            <div>准确率</div>
+            <div>召回率</div>
+            <div>误删率</div>
+            <div>有效率提升</div>
+          </div>
+          <div class="compare-row">
+            <div>V1 规则为主</div>
+            <div>0.78</div>
+            <div>0.60</div>
+            <div>0.12</div>
+            <div>+9%</div>
+          </div>
+          <div class="compare-row">
+            <div>V2 规则 + 模型</div>
+            <div>0.87</div>
+            <div>0.76</div>
+            <div>0.06</div>
+            <div>+17%</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast">已导出演示报表（示例）</div>
+    <script src="./app.js"></script>
+  </body>
+</html>
