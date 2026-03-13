@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>评论清洗 Demo</title>
+    <style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  color: #1e1f25;
+  background: #f5f6fa;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px 56px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #5e6b87;
+  text-transform: uppercase;
+}
+
+.sub {
+  margin: 8px 0 0;
+  color: #5b6476;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: 1px solid #d7dae2;
+  background: #fff;
+  color: #1f2a3f;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #3d6df2;
+  color: #fff;
+  border-color: #3d6df2;
+}
+
+.btn.ghost {
+  background: transparent;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.card .label {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.card .value {
+  font-size: 26px;
+  margin: 10px 0 6px;
+  font-weight: 700;
+}
+
+.card .hint {
+  color: #8a93a6;
+  font-size: 12px;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+}
+
+.panel-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid #d1d5db;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.chip.active {
+  background: #e8efff;
+  border-color: #3d6df2;
+  color: #2d4cc5;
+}
+
+.range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.range input {
+  width: 100%;
+}
+
+.range-value {
+  font-weight: 600;
+  width: 44px;
+}
+
+.input {
+  border: 1px solid #d7dae2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.toggle-group {
+  justify-content: center;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2.3fr 0.7fr 0.6fr 1.5fr 0.6fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.row.head {
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.row.item {
+  background: #f8fafc;
+}
+
+.tag {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3d50c5;
+  display: inline-block;
+}
+
+.tag.keep {
+  background: #dcfce7;
+  color: #1f7a39;
+}
+
+.tag.remove {
+  background: #fee2e2;
+  color: #b42318;
+}
+
+.action-btn {
+  border: none;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.action-btn.remove {
+  color: #b42318;
+}
+
+.action-btn.keep {
+  color: #1f7a39;
+}
+
+.rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.rule {
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.rule-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.rule-desc {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.compare {
+  display: grid;
+  gap: 10px;
+}
+
+.compare-head,
+.compare-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.compare-head {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.compare-row {
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #111827;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 860px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+</style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div>
+          <div class="eyebrow">AI 产品经理作品集 Demo</div>
+          <h1>评论清洗与可解释过滤</h1>
+          <p class="sub">
+            规则 + 模型融合，支持可解释、可回滚与人机协同。
+          </p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnAuto">一键清洗</button>
+          <button class="btn" id="btnReset">重置</button>
+          <button class="btn ghost" id="btnExport">导出报表</button>
+        </div>
+      </header>
+
+      <section class="cards" id="metrics">
+        <div class="card">
+          <div class="label">总评论</div>
+          <div class="value" id="metricTotal">-</div>
+          <div class="hint">数据规模</div>
+        </div>
+        <div class="card">
+          <div class="label">噪声占比</div>
+          <div class="value" id="metricNoiseRate">-</div>
+          <div class="hint">规则 + 模型判定</div>
+        </div>
+        <div class="card">
+          <div class="label">清洗后有效率</div>
+          <div class="value" id="metricEffective">-</div>
+          <div class="hint" id="metricLift">提升 -</div>
+        </div>
+        <div class="card">
+          <div class="label">预计节省人力</div>
+          <div class="value" id="metricSaved">-</div>
+          <div class="hint">按 5 秒/条估算</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">筛选条件</div>
+        <div class="filters">
+          <div class="filter-group">
+            <div class="filter-label">噪声类型</div>
+            <div class="chips" id="typeChips"></div>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label" for="threshold">噪声阈值</label>
+            <div class="range">
+              <input id="threshold" type="range" min="0.4" max="0.95" step="0.05" />
+              <span class="range-value" id="thresholdValue">0.70</span>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label" for="search">搜索评论</label>
+            <input id="search" class="input" placeholder="输入关键词，例如：广告/客服/物流" />
+          </div>
+          <div class="filter-group toggle-group">
+            <label class="toggle">
+              <input id="onlyNoise" type="checkbox" />
+              <span>仅显示将被清洗</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">评论列表</div>
+        <div class="table">
+          <div class="row head">
+            <div>评论内容</div>
+            <div>类型</div>
+            <div>置信度</div>
+            <div>可解释理由</div>
+            <div>操作</div>
+          </div>
+          <div id="tableBody"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">规则配置（示例）</div>
+        <div class="rules">
+          <div class="rule">
+            <div class="rule-title">低信息密度</div>
+            <div class="rule-desc">长度 &lt; 5 或高频口头词占比 &gt; 60%</div>
+          </div>
+          <div class="rule">
+            <div class="rule-title">广告引流</div>
+            <div class="rule-desc">命中黑名单词 + 外链特征</div>
+          </div>
+          <div class="rule">
+            <div class="rule-title">重复评论</div>
+            <div class="rule-desc">相似度 &gt; 0.92，近 7 天内重复</div>
+          </div>
+          <div class="rule">
+            <div class="rule-title">机器人模板</div>
+            <div class="rule-desc">模板句式 + 低词汇多样性</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">迭代效果对比</div>
+        <div class="compare">
+          <div class="compare-head">
+            <div>版本</div>
+            <div>准确率</div>
+            <div>召回率</div>
+            <div>误删率</div>
+            <div>有效率提升</div>
+          </div>
+          <div class="compare-row">
+            <div>V1 规则为主</div>
+            <div>0.78</div>
+            <div>0.60</div>
+            <div>0.12</div>
+            <div>+9%</div>
+          </div>
+          <div class="compare-row">
+            <div>V2 规则 + 模型</div>
+            <div>0.87</div>
+            <div>0.76</div>
+            <div>0.06</div>
+            <div>+17%</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast">已导出演示报表（示例）</div>
+    <script>
+const data = [
+  {
+    id: 1,
+    text: "哈哈哈哈哈哈，太好笑了",
+    type: "无意义/灌水",
+    score: 0.86,
+    reason: "低信息密度 + 口头词占比高",
+  },
+  {
+    id: 2,
+    text: "客服回复慢，物流也不太行",
+    type: "正常",
+    score: 0.22,
+    reason: "包含具体问题点",
+  },
+  {
+    id: 3,
+    text: "关注公众号送红包，点链接",
+    type: "广告引流",
+    score: 0.91,
+    reason: "命中黑名单词 + 外链特征",
+  },
+  {
+    id: 4,
+    text: "不错不错不错不错",
+    type: "重复评论",
+    score: 0.78,
+    reason: "高相似度短评",
+  },
+  {
+    id: 5,
+    text: "外观挺好，尺码偏小，建议买大一号",
+    type: "正常",
+    score: 0.18,
+    reason: "高信息密度",
+  },
+  {
+    id: 6,
+    text: "统一回复：已收到反馈，将尽快处理",
+    type: "机器人模板",
+    score: 0.74,
+    reason: "模板句式 + 低词汇多样性",
+  },
+  {
+    id: 7,
+    text: "图文不符，跟描述差太多",
+    type: "正常",
+    score: 0.12,
+    reason: "与主题相关",
+  },
+  {
+    id: 8,
+    text: "好评，五星支持",
+    type: "低信息密度",
+    score: 0.66,
+    reason: "内容过短且缺少细节",
+  },
+  {
+    id: 9,
+    text: "哈哈哈已打卡，明天再看",
+    type: "无意义/灌水",
+    score: 0.71,
+    reason: "缺少评价信息",
+  },
+  {
+    id: 10,
+    text: "https://xx.com 进群拿优惠",
+    type: "广告引流",
+    score: 0.93,
+    reason: "含外链 + 引流词",
+  },
+  {
+    id: 11,
+    text: "一般般，穿两次起球",
+    type: "正常",
+    score: 0.24,
+    reason: "包含具体问题",
+  },
+  {
+    id: 12,
+    text: "同样内容已出现 3 次",
+    type: "重复评论",
+    score: 0.8,
+    reason: "文本相似度 0.95",
+  },
+];
+
+const noiseTypes = [
+  "无意义/灌水",
+  "广告引流",
+  "重复评论",
+  "机器人模板",
+  "低信息密度",
+];
+
+const state = {
+  threshold: 0.7,
+  enabledTypes: new Set(noiseTypes),
+  search: "",
+  onlyNoise: false,
+};
+
+const items = data.map((item) => ({
+  ...item,
+  manual: false,
+  decision: false,
+}));
+
+const typeChips = document.getElementById("typeChips");
+const thresholdInput = document.getElementById("threshold");
+const thresholdValue = document.getElementById("thresholdValue");
+const searchInput = document.getElementById("search");
+const onlyNoiseInput = document.getElementById("onlyNoise");
+const tableBody = document.getElementById("tableBody");
+
+const metricTotal = document.getElementById("metricTotal");
+const metricNoiseRate = document.getElementById("metricNoiseRate");
+const metricEffective = document.getElementById("metricEffective");
+const metricLift = document.getElementById("metricLift");
+const metricSaved = document.getElementById("metricSaved");
+
+const btnAuto = document.getElementById("btnAuto");
+const btnReset = document.getElementById("btnReset");
+const btnExport = document.getElementById("btnExport");
+const toast = document.getElementById("toast");
+
+function computeDecision(item) {
+  return item.score >= state.threshold && state.enabledTypes.has(item.type);
+}
+
+function applyAutoDecision() {
+  items.forEach((item) => {
+    if (!item.manual) {
+      item.decision = computeDecision(item);
+    }
+  });
+}
+
+function setAllAuto() {
+  items.forEach((item) => {
+    item.manual = false;
+  });
+  applyAutoDecision();
+}
+
+function resetAll() {
+  state.threshold = 0.7;
+  state.enabledTypes = new Set(noiseTypes);
+  state.search = "";
+  state.onlyNoise = false;
+  items.forEach((item) => {
+    item.manual = false;
+    item.decision = false;
+  });
+  thresholdInput.value = state.threshold;
+  thresholdValue.textContent = state.threshold.toFixed(2);
+  searchInput.value = "";
+  onlyNoiseInput.checked = false;
+  renderChips();
+  applyAutoDecision();
+  render();
+}
+
+function formatPercent(value) {
+  return `${Math.round(value * 100)}%`;
+}
+
+function showToast() {
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 1600);
+}
+
+function getFilteredItems() {
+  const keyword = state.search.trim();
+  return items.filter((item) => {
+    const matchSearch = keyword ? item.text.includes(keyword) : true;
+    const matchNoise = state.onlyNoise ? item.decision : true;
+    return matchSearch && matchNoise;
+  });
+}
+
+function renderChips() {
+  typeChips.innerHTML = "";
+  noiseTypes.forEach((type) => {
+    const chip = document.createElement("button");
+    chip.className = `chip ${state.enabledTypes.has(type) ? "active" : ""}`;
+    chip.textContent = type;
+    chip.addEventListener("click", () => {
+      if (state.enabledTypes.has(type)) {
+        state.enabledTypes.delete(type);
+      } else {
+        state.enabledTypes.add(type);
+      }
+      renderChips();
+      applyAutoDecision();
+      render();
+    });
+    typeChips.appendChild(chip);
+  });
+}
+
+function renderMetrics() {
+  const total = items.length;
+  const noiseCount = items.filter((item) => item.decision).length;
+  const noiseRate = total ? noiseCount / total : 0;
+  const effectiveRate = total ? (total - noiseCount) / total : 0;
+  const baseEffective = 0.62;
+  const lift = effectiveRate - baseEffective;
+  const savedSeconds = noiseCount * 5;
+  const savedMinutes = Math.round(savedSeconds / 60);
+
+  metricTotal.textContent = total;
+  metricNoiseRate.textContent = formatPercent(noiseRate);
+  metricEffective.textContent = formatPercent(effectiveRate);
+  metricLift.textContent = `提升 ${formatPercent(Math.max(lift, 0))}`;
+  metricSaved.textContent = `${savedMinutes} 分钟/天`;
+}
+
+function renderTable() {
+  const filtered = getFilteredItems();
+  tableBody.innerHTML = "";
+
+  filtered.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "row item";
+
+    const decisionTag = item.decision ? "remove" : "keep";
+    const decisionLabel = item.decision ? "将被清洗" : "保留";
+
+    row.innerHTML = `
+      <div>${item.text}</div>
+      <div>${item.type === "正常" ? "正常" : `<span class="tag">${item.type}</span>`}</div>
+      <div>${item.score.toFixed(2)}</div>
+      <div>${item.reason}</div>
+      <div>
+        <span class="tag ${decisionTag}">${decisionLabel}</span>
+        <button class="action-btn ${item.decision ? "keep" : "remove"}" data-id="${item.id}">
+          ${item.decision ? "保留" : "剔除"}
+        </button>
+      </div>
+    `;
+    tableBody.appendChild(row);
+  });
+
+  document.querySelectorAll(".action-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = Number(button.dataset.id);
+      const item = items.find((entry) => entry.id === id);
+      if (!item) return;
+      item.decision = !item.decision;
+      item.manual = true;
+      render();
+    });
+  });
+}
+
+function render() {
+  renderMetrics();
+  renderTable();
+}
+
+thresholdInput.value = state.threshold;
+thresholdValue.textContent = state.threshold.toFixed(2);
+
+thresholdInput.addEventListener("input", (event) => {
+  state.threshold = Number(event.target.value);
+  thresholdValue.textContent = state.threshold.toFixed(2);
+  applyAutoDecision();
+  render();
+});
+
+searchInput.addEventListener("input", (event) => {
+  state.search = event.target.value;
+  render();
+});
+
+onlyNoiseInput.addEventListener("change", (event) => {
+  state.onlyNoise = event.target.checked;
+  render();
+});
+
+btnAuto.addEventListener("click", () => {
+  setAllAuto();
+  render();
+});
+
+btnReset.addEventListener("click", () => resetAll());
+
+btnExport.addEventListener("click", () => {
+  showToast();
+});
+
+renderChips();
+applyAutoDecision();
+render();
+
+</script>
+  </body>
+</html>
